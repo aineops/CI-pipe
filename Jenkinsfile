@@ -10,6 +10,7 @@ pipeline {
         stage('Preparation') {
             steps {
                 script {
+                    checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[credentialsId: 'gittoken', url: 'https://github.com/aineops/CI-pipe']])
                     // Remarquea : Les commandes 'sudo' peuvent nécessiter une configuration supplémentaire pour fonctionner dans Jenkins
                     sh '''
                         sudo apt update
