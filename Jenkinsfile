@@ -14,7 +14,7 @@ pipeline {
                     // Remarque : Les commandes 'sudo' peuvent nécessiter une configuration supplémentaire pour fonctionner dans Jenkins
                     sh '''
                         sudo apt update
-                        sudo apt install maven -y
+                       # sudo apt install maven -y
                         curl -fsSL https://get.docker.com | sudo sh
                         sudo chmod 666 /var/run/docker.sock
                         sudo usermod -aG docker $USER
