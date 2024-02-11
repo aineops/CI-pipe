@@ -10,12 +10,9 @@ pipeline {
         stage('Preparation') {
             steps {
                 script {
-                    checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[credentialsId: 'gittoken', url: 'https://github.com/aineops/CI-pipe']])
                     // Remarque : Les commandes 'sudo' peuvent nécessiter une configuration supplémentaire pour fonctionner dans Jenkins
                     sh '''
                         sudo apt update
-                       # sudo apt install maven -y
-                        curl -fsSL https://get.docker.com | sudo sh
                         sudo chmod 666 /var/run/docker.sock
                         sudo usermod -aG docker $USER
                     '''
@@ -50,7 +47,7 @@ pipeline {
                     sh '''
                         cd /app
                         mvn clean install
-                        find . -type f -name "*.jar" -exec chmod 755 {} \;
+                        find . -type f -name "*.jar" -exec chmod 755 {} \\;
                         mvn spring-boot:build-image -Dmaven.test.skip=true -Pk8s -DREPOSITORY_PREFIX=${REPOSITORY_PREFIX}
                         ./scripts/pushImages.sh
                     '''
@@ -83,7 +80,7 @@ pipeline {
 
     post {
         always {
-            // Nettoyage final, si nécessaire
+            echo "Le processus est terminé"
         }
     }
 }
