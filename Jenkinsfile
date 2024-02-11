@@ -10,7 +10,7 @@ pipeline {
         stage('Preparation') {
             steps {
                 script {
-                    // Remarque : Les commandes 'sudo' peuvent nécessiter une configuration supplémentaire pour fonctionner dans Jenkins
+                    // Remarquea : Les commandes 'sudo' peuvent nécessiter une configuration supplémentaire pour fonctionner dans Jenkins
                     sh '''
                         sudo apt update
                         sudo apt install maven -y
