@@ -15,6 +15,7 @@ pipeline {
                         sh '''
                             set -x
                             sudo apt update
+                            sudo apt-get install python3.10-venv -y
                             sudo chmod 666 /var/run/docker.sock
                             sudo usermod -aG docker $USER
                         '''
@@ -32,6 +33,7 @@ pipeline {
                         echo 'Configuration du répertoire /app...'
                         sh '''
                             set -x
+                            sudo rm -rf /app
                             sudo mkdir -p /app
                             sudo chown $USER:$USER /app
                             sudo chmod 777 /app
@@ -61,6 +63,25 @@ pipeline {
             }
         }
 
+        stage('Setup Python Environment') {
+            steps {
+                script {
+                    try {
+                        echo 'Configuration de l\'environnement virtuel Python...'
+                        sh '''
+                            set -x
+                            python3 -m venv venv
+                            . venv/bin/activate
+                            pip install pytest selenium webdriver_manager faker pytest-html
+                        '''
+                    } catch (Exception e) {
+                        echo "Erreur lors de la configuration de l'environnement virtuel Python : ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+
+
         stage('Clean Docker') {
             steps {
                 script {
@@ -70,7 +91,7 @@ pipeline {
                             set -x
                             docker stop $(docker ps -aq) || true
                             docker rm -f $(docker ps -aq) || true
-                            docker rmi -f $(docker images -q) || true
+                            # docker rmi -f $(docker images -q) || true
                         '''
                     } catch (Exception e) {
                         echo "Erreur lors du nettoyage Docker : ${e.getMessage()}"
@@ -100,17 +121,42 @@ pipeline {
                 script {
                     try {
                         echo 'Construction et déploiement des images Docker...'
-                        sh '''
-                            set -x
-                            cd /app
-                            mvn clean
-                            mvn clean install -e -X
-                            find . -type f -name "*.jar" -exec chmod 755 {} \\;
-                            mvn spring-boot:build-image -Dmaven.test.skip=true -Pk8s -DREPOSITORY_PREFIX=${REPOSITORY_PREFIX}
-                            ./scripts/pushImages.sh
-                        '''
+                        withCredentials([usernamePassword(credentialsId: 'docker', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
+                            sh '''
+                                set -x
+                                echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin
+                                cd /app
+                                mvn clean
+                                mvn clean install -e -X
+                                find . -type f -name "*.jar" -exec chmod 755 {} \\;
+                                mvn spring-boot:build-image -Dmaven.test.skip=true -Pk8s -DREPOSITORY_PREFIX=${REPOSITORY_PREFIX}
+                            '''
+                        }
                     } catch (Exception e) {
                         echo "Erreur lors de la construction et du déploiement : ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+        
+        stage('Rename Docker Images') {
+            steps {
+                script {
+                    try {
+                        echo 'Renommage des images Docker...'
+                        sh '''
+                            set -x
+                            images=$(docker images --format "{{.Repository}}:{{.Tag}}")
+                            for image in $images; do
+                                repo=$(echo $image | cut -d ':' -f1)
+                                tag=$(echo $image | cut -d ':' -f2)
+                                new_name="${REPOSITORY_PREFIX}/${repo}:${tag}"
+                                docker tag $image $new_name
+                                docker rmi $image
+                            done
+                        '''
+                    } catch (Exception e) {
+                        echo "Erreur lors du renommage des images Docker : ${e.getMessage()}"
                     }
                 }
             }
@@ -133,6 +179,7 @@ pipeline {
             }
         }
 
+
         stage('Run Selenium Tests and Update Report') {
             steps {
                 script {
@@ -140,12 +187,17 @@ pipeline {
                         echo 'Exécution des tests Selenium et mise à jour du rapport...'
                         sh '''
                             set -x
-                            pytest --html=report.html > /reports/selenium_tests.txt
+                            . venv/bin/activate
+                            ./venv/bin/pytest --html=report.html > /reports/selenium_tests.txt
+                            cd
                             cd /reports
                             git pull origin master
                             git add selenium_tests.txt
                             git commit -m "Update Selenium test results"
                             git push origin master
+                            cd
+                            cd /app
+                            ./scripts/pushImages.sh
                         '''
                     } catch (Exception e) {
                         echo "Erreur lors des tests Selenium : ${e.getMessage()}"
