@@ -25,6 +25,24 @@ pipeline {
             }
         }
 
+        stage('Setup /app Directory') {
+            steps {
+                script {
+                    try {
+                        echo 'Configuration du répertoire /app...'
+                        sh '''
+                            set -x
+                            sudo mkdir -p /app
+                            sudo chown $USER:$USER /app
+                            sudo chmod 777 /app
+                        '''
+                    } catch (Exception e) {
+                        echo "Erreur lors de la configuration du répertoire /app : ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+
         stage('Clean Docker') {
             steps {
                 script {
@@ -50,7 +68,6 @@ pipeline {
                         echo 'Clonage du dépôt Git...'
                         sh '''
                             set -x
-                            rm -rf /app
                             git clone https://github.com/devops-petclinic-group/spring-petclinic-cloud.git /app
                         '''
                     } catch (Exception e) {
