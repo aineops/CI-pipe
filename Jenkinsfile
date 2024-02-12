@@ -45,15 +45,17 @@ pipeline {
 
         stage('Clone Repository') {
             steps {
-                try {
-                    echo 'Clonage du dépôt Git...'
-                    sh '''
-                        set -x
-                        rm -rf /app
-                        git clone https://github.com/devops-petclinic-group/spring-petclinic-cloud.git /app
-                    '''
-                } catch (Exception e) {
-                    echo "Erreur lors du clonage du dépôt : ${e.getMessage()}"
+                script {
+                    try {
+                        echo 'Clonage du dépôt Git...'
+                        sh '''
+                            set -x
+                            rm -rf /app
+                            git clone https://github.com/devops-petclinic-group/spring-petclinic-cloud.git /app
+                        '''
+                    } catch (Exception e) {
+                        echo "Erreur lors du clonage du dépôt : ${e.getMessage()}"
+                    }
                 }
             }
         }
@@ -80,34 +82,38 @@ pipeline {
 
         stage('Deploy Services') {
             steps {
-                try {
-                    echo 'Déploiement des services...'
-                    sh '''
-                        set -x
-                        cd /app
-                        docker-compose up -d
-                    '''
-                } catch (Exception e) {
-                    echo "Erreur lors du déploiement des services : ${e.getMessage()}"
+                script {
+                    try {
+                        echo 'Déploiement des services...'
+                        sh '''
+                            set -x
+                            cd /app
+                            docker-compose up -d
+                        '''
+                    } catch (Exception e) {
+                        echo "Erreur lors du déploiement des services : ${e.getMessage()}"
+                    }
                 }
             }
         }
 
         stage('Run Selenium Tests and Update Report') {
             steps {
-                try {
-                    echo 'Exécution des tests Selenium et mise à jour du rapport...'
-                    sh '''
-                        set -x
-                        pytest --html=report.html > /reports/selenium_tests.txt
-                        cd /reports
-                        git pull origin master
-                        git add selenium_tests.txt
-                        git commit -m "Update Selenium test results"
-                        git push origin master
-                    '''
-                } catch (Exception e) {
-                    echo "Erreur lors des tests Selenium : ${e.getMessage()}"
+                script {
+                    try {
+                        echo 'Exécution des tests Selenium et mise à jour du rapport...'
+                        sh '''
+                            set -x
+                            pytest --html=report.html > /reports/selenium_tests.txt
+                            cd /reports
+                            git pull origin master
+                            git add selenium_tests.txt
+                            git commit -m "Update Selenium test results"
+                            git push origin master
+                        '''
+                    } catch (Exception e) {
+                        echo "Erreur lors des tests Selenium : ${e.getMessage()}"
+                    }
                 }
             }
         }
