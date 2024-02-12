@@ -127,9 +127,9 @@ pipeline {
                                 echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin
                                 cd /app
                                 mvn clean
-                                mvn clean install -e -X
+                                ./mvnw clean install -P buildDocker
                                 find . -type f -name "*.jar" -exec chmod 755 {} \\;
-                                mvn spring-boot:build-image -Dmaven.test.skip=true -Pk8s -DREPOSITORY_PREFIX=${REPOSITORY_PREFIX}
+
                             '''
                         }
                     } catch (Exception e) {
@@ -143,10 +143,10 @@ pipeline {
             steps {
                 script {
                     try {
-                        echo 'Renommage des images Docker...'
+                        echo 'Renommage des images Docker commençant par "spring"...'
                         sh '''
                             set -x
-                            images=$(docker images --format "{{.Repository}}:{{.Tag}}")
+                            images=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep '^spring')
                             for image in $images; do
                                 repo=$(echo $image | cut -d ':' -f1)
                                 tag=$(echo $image | cut -d ':' -f2)
@@ -170,7 +170,7 @@ pipeline {
                         sh '''
                             set -x
                             cd /app
-                            docker-compose up -d
+                            docker-compose up -d --build
                         '''
                     } catch (Exception e) {
                         echo "Erreur lors du déploiement des services : ${e.getMessage()}"
