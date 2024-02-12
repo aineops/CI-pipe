@@ -43,6 +43,24 @@ pipeline {
             }
         }
 
+        stage('Verify and Set Permissions for /app') {
+            steps {
+                script {
+                    try {
+                        echo 'Vérification et configuration des permissions pour /app...'
+                        sh '''
+                            set -x
+                            ls -ld /app
+                            sudo chmod -R 777 /app
+                            ls -ld /app
+                        '''
+                    } catch (Exception e) {
+                        echo "Erreur lors de la vérification / configuration des permissions : ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+
         stage('Clean Docker') {
             steps {
                 script {
@@ -85,7 +103,8 @@ pipeline {
                         sh '''
                             set -x
                             cd /app
-                            mvn clean install
+                            mvn clean
+                            mvn clean install -e -X
                             find . -type f -name "*.jar" -exec chmod 755 {} \\;
                             mvn spring-boot:build-image -Dmaven.test.skip=true -Pk8s -DREPOSITORY_PREFIX=${REPOSITORY_PREFIX}
                             ./scripts/pushImages.sh
